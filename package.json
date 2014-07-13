@@ -1,0 +1,21 @@
+{
+  "name": "asapi",
+  "version": "0.0.0",
+  "description": "node js archivesspace rest client",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "archivesspace",
+    "rest",
+    "client"
+  ],
+  "author": "Brian Hoffman <brianjhoffman@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "form-data": "^0.1.4",
+    "request": "^2.37.0",
+    "winston": "^0.7.3"
+  }
+}
