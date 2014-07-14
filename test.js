@@ -66,3 +66,18 @@ exports.createClassification = function(test) {
   });
 };
 
+
+exports.createAccession = function(test) {
+  test.expect(1);
+
+  var rec = {
+    id_0: Math.random().toString(36).substring(7),
+    title: Math.random().toString(36).substring(7),
+    accession_date: "2001-01-01"
+  };
+
+  api.createAccession(rec, function(err, json) {
+    test.ok(json.uri);
+    test.done();
+  });
+};

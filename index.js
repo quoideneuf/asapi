@@ -127,6 +127,13 @@ function Api(opts) {
   };
 
 
+  this.createAccession = function(obj, callback) {
+    doPost("/repositories/:repo_id/accessions", obj, function(err, json) {
+      callback(err, json);
+    });
+  };
+
+
   this.createDigitalObject = function(obj, callback) {
     doPost("/repositories/:repo_id/digital_objects", obj, function(err, json) {
       callback(err, json);
