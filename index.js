@@ -52,6 +52,15 @@ function Api(opts) {
   };
 
 
+  this.hasSession = function() {
+    if (session) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+
   this.get = function(uri, callback) {
     doGet(uri, callback);
   }
@@ -104,11 +113,31 @@ function Api(opts) {
   };
 
 
+  this.createLocation = function(obj, callback) {
+    doPost("/locations", obj, function(err, json) {
+      callback(err, json);
+    });
+  };
+
+
+  this.createClassification = function(obj, callback) {
+    doPost("/repositories/:repo_id/classifications", obj, function(err, json) {
+      callback(err, json);
+    });
+  };
+
+
   this.createDigitalObject = function(obj, callback) {
     doPost("/repositories/:repo_id/digital_objects", obj, function(err, json) {
       callback(err, json);
     });
   };
+
+
+  function setSession(new_session) {
+    session = new_session;
+  };
+
 
   function expand(path) {
 
@@ -150,7 +179,7 @@ function Api(opts) {
       } else if (!err && res.statusCode != 200) {
         serverError(res.statusCode, body);
       } else {
-        logger.debug("ASpace Response: " + res.statusCode + " : " + body);
+        logger.debug("ArchivesSpace Response: " + res.statusCode + " : " + JSON.stringify(body));
       }
 
       callback(err, res, body);
@@ -182,9 +211,12 @@ function Api(opts) {
       json: obj
     };
 
+    logger.debug(opts.json);
+
+
     request.post(opts, function(err, res, body) {
 
-      logger.debug("ASpace Response: " + res.statusCode + " : " + body);
+      logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
 
       if (!err && res.statusCode != 200) {
         serverError(res.statusCode, body.error);
