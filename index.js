@@ -36,6 +36,20 @@ function Api(opts) {
   }
 
 
+  this.nuke = function(callback) {
+    doDelete("/", function(err, json) {
+
+      if (err) {
+        logger.debug("Error " + err);
+      } else {
+        logger.debug(JSON.stringify(json));
+      }
+
+      callback(err, json);
+    });
+  }      
+
+
   this.login = function(opts, callback) {
 
     var form = {form: {password: opts.password}};
@@ -208,6 +222,27 @@ function Api(opts) {
   };
 
 
+  function doDelete(path, callback) {
+    var opts = {
+      url: expand(path),
+      headers: {
+        'X-ArchivesSpace-Session': session
+      }
+    };    
+
+    request.del(opts, function(err, res, body) {
+
+      logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
+
+      if (!err && res.statusCode != 200) {
+        serverError(res.statusCode, body.error);
+      }
+
+      callback(err, body);
+    });
+  };
+
+
   function doPost(path, obj, callback) {
 
     var opts = {
@@ -218,9 +253,6 @@ function Api(opts) {
       json: obj
     };
 
-    logger.debug(opts.json);
-
-
     request.post(opts, function(err, res, body) {
 
       logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
@@ -230,7 +262,6 @@ function Api(opts) {
       }
 
       callback(err, body);
-
     });
 
   };
