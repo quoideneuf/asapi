@@ -12,6 +12,7 @@ function Api(opts) {
   var active_repo = opts.active_repo;
   var logger = opts.logger;
 
+  var that = this;
 
   if (typeof(logger) == 'undefined') {
     logger = new (winston.Logger)({
@@ -60,8 +61,9 @@ function Api(opts) {
       }
 
       json = JSON.parse(body);
-      callback(err, json.session);
       session = json.session;
+
+      if (callback) callback(err, session);
     });
   };
 
@@ -100,6 +102,41 @@ function Api(opts) {
   this.getRepositories = function(callback) {
     doGet("/repositories", function(err, json) {
       callback(err, json);
+    });
+  };
+
+
+  this.getResources = function(callback, page) {
+    if (typeof(page) == 'undefined') {
+      page = 1;
+    }
+
+    doGet("/repositories/:repo_id/resources?page=" + page, function(err, json) {
+      callback(err, json);
+
+      if (!err && json.last_page > page) {
+        that.getResources(callback, page + 1)
+      }
+    });
+  };
+
+
+  this.eachResource = function(callback) {
+    that.getResources(function(err, json) {
+      for (var i = 0; i < json.results.length; i++) {
+        callback(json.results[i]);
+      }
+    });
+  };
+
+
+  this.updateRecord = function(rec, callback) {
+    doPost(rec.uri, rec, function(err, body) {
+      if (err) {
+        logger.debug("Error updating " + rec.uri);
+      } else {
+        logger.debug("Updated " + rec.uri);
+      }
     });
   };
 
@@ -148,6 +185,13 @@ function Api(opts) {
   };
 
 
+  this.createResource = function(obj, callback) {
+    doPost("/repositories/:repo_id/resources", obj, function(err, json) {
+      callback(err, json);
+    });
+  };
+
+
   this.createDigitalObject = function(obj, callback) {
     doPost("/repositories/:repo_id/digital_objects", obj, function(err, json) {
       callback(err, json);
@@ -175,9 +219,11 @@ function Api(opts) {
     return backend_url + path;
   }
 
+
   function serverError(code, body) {
     var err = code + ": " + body;
-    throw err;
+
+    return err;
   }
 
 
@@ -192,13 +238,15 @@ function Api(opts) {
       opts.headers['X-ArchivesSpace-Session'] = session;
     }
 
-    logger.debug(opts);
 
     request(opts, function(err, res, body) {
+
+      if (!err && res.statusCode != 200) {
+        err = serverError(res.statusCode, body);
+      } 
+
       if (err) {
         logger.debug("Error: " + err);
-      } else if (!err && res.statusCode != 200) {
-        serverError(res.statusCode, body);
       } else {
         logger.debug("ArchivesSpace Response: " + res.statusCode + " : " + JSON.stringify(body));
       }

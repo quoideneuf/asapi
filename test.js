@@ -1,7 +1,7 @@
 
 var Api = require('./index.js')
 var api = new Api({
-  url:'http://localhost:4567',
+  url:'http://localhost:8089',
   active_repo: 2
 })
 
@@ -81,3 +81,23 @@ exports.createAccession = function(test) {
     test.done();
   });
 };
+
+
+exports.createResource = function(test) {
+  test.expect(1);
+
+  var rec = {
+    id_0: Math.random().toString(36).substring(7),
+    title: Math.random().toString(36).substring(7),
+    level: "collection",
+    extents: [{number: "1",
+               portion: "whole",
+               extent_type: "linear_feet"}]
+  };
+
+  api.createResource(rec, function(err, json) {
+    test.ok(json.uri);
+    test.done();
+  });
+};
+
