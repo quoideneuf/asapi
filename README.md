@@ -30,25 +30,25 @@ Convert all extent information to metric system:
 
 ```javascript
 api.eachResource(function(resource) {
-    var update = false;
+  var update = false;
 
-    for (var i = 0; i < resource.extents.length; i++) {
+  for (var i = 0; i < resource.extents.length; i++) {
 
-      if (resource.extents[i] && resource.extents[i].extent_type == 'linear_feet') {
-        resource.extents[i].number = (resource.extents[i].number * 0.3048) + "";
-        resource.extents[i].extent_type = "linear_meters";
-        update = true;
-      }
+    if (resource.extents[i] && resource.extents[i].extent_type == 'linear_feet') {
+      resource.extents[i].number = (resource.extents[i].number * 0.3048) + "";
+      resource.extents[i].extent_type = "linear_meters";
+      update = true;
     }
+  }
 
-    if (update) api.updateRecord(resource, function(err, body) {
-      if (err)
-        console.log("uh oh " + err);
-      else {
-        console.log(body);
-      }
-    });
-
+  if (update) api.updateRecord(resource, function(err, body) {
+    if (err)
+      console.log("uh oh " + err);
+    else {
+      console.log(body);
+    }
   });
+
+});
 
 ```

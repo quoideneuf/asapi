@@ -17,7 +17,7 @@ function Api(opts) {
   if (typeof(logger) == 'undefined') {
     logger = new (winston.Logger)({
       transports: [
-        new (winston.transports.Console)({ level: 'debug' })
+        new (winston.transports.Console)({ level: 'info' })
       ]
     });
   }
@@ -137,6 +137,7 @@ function Api(opts) {
       } else {
         logger.debug("Updated " + rec.uri);
       }
+      callback(err, rec.uri);
     });
   };
 
@@ -144,9 +145,10 @@ function Api(opts) {
   this.createJob = function(job, callback) {
     var form = new FormData();
     form.append('job', JSON.stringify(job));
-    job.files.each_with_index(function(filepath, i) {
+    for (var i=0; i < job.files.length; i++) {
+      var filepath = job.files[i];
       form.append('files[' + i + ']', fs.createReadStream(filepath));
-    });
+    }
 
     doPostForm("/repositories/:repo_id/jobs", form, function(err, json) {
       if (!err && json.status != 'Created') {
@@ -209,8 +211,6 @@ function Api(opts) {
     if (active_repo) {
       path = path.replace(":repo_id", active_repo);
     }
-
-    console.log(backend_url);
 
     if (typeof(backend_url) == 'undefined') {
       throw "Missing base url for REST api";
