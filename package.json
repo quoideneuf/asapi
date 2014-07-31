@@ -15,7 +15,8 @@
   "license": "ISC",
   "dependencies": {
     "form-data": "^0.1.4",
-    "request": "^2.37.0",
+    "repl.history": "^0.1.1",
+    "request": "^2.39.0",
     "winston": "^0.7.3"
   }
 }
