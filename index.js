@@ -77,6 +77,11 @@ function Api(opts) {
   };
 
 
+  this.download = function(uri, streamWriter) {
+    downloadStream(uri, streamWriter);
+  }
+
+
   this.get = function(uri, callback) {
     doGet(uri, callback);
   }
@@ -224,6 +229,20 @@ function Api(opts) {
     var err = code + ": " + body;
 
     return err;
+  }
+
+
+  function downloadStream(uri, streamWriter) {
+    var opts = {
+      url: expand(uri),
+      headers: {}
+    };
+
+    if (session) {
+      opts.headers['X-ArchivesSpace-Session'] = session;
+    }
+
+    request.get(opts).pipe(streamWriter);
   }
 
 

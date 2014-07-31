@@ -7,7 +7,7 @@ NodeJS module providing common functions of the ArchivesSpace REST Api
 
 Install:
 
-    $ npm install https://github.com/lcdhoffman/asapi/tarball/master
+    $ npm install asapi
 
 Use:
 
