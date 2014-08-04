@@ -4,6 +4,7 @@ var winston = require('winston');
 
 var request = require('request');
 var FormData = require('form-data');
+var EventEmitter = require('events').EventEmitter;
 
 function Api(opts) {
   opts = opts || {};
@@ -11,8 +12,10 @@ function Api(opts) {
   var backend_url = opts.url;
   var active_repo = opts.active_repo;
   var logger = opts.logger;
+  var emitter = opts.emitter;
 
   var that = this;
+
 
   if (typeof(logger) == 'undefined') {
     logger = new (winston.Logger)({
@@ -22,7 +25,13 @@ function Api(opts) {
     });
   }
 
-  logger.info("Backend url: " + backend_url);
+
+  if (typeof(emitter) == 'undefined') {
+    emitter = new EventEmitter();
+  }
+
+
+  logger.debug("Backend url: " + backend_url);
 
   this.ping = function(callback) {
     doGet("/", function(err, json) {
@@ -128,8 +137,12 @@ function Api(opts) {
 
   this.eachResource = function(callback) {
     that.getResources(function(err, json) {
-      for (var i = 0; i < json.results.length; i++) {
-        callback(json.results[i]);
+      if (err) {
+        logger.info("Unable to get Resource records due to error.");
+      } else {
+        for (var i = 0; i < json.results.length; i++) {
+          callback(json.results[i]);
+        }
       }
     });
   };
@@ -206,6 +219,11 @@ function Api(opts) {
   };
 
 
+  this.on = function(event, callback) {
+    emitter.on(event, callback);
+  }
+
+
   function setSession(new_session) {
     session = new_session;
   };
@@ -226,8 +244,8 @@ function Api(opts) {
 
 
   function serverError(code, body) {
-    var err = code + ": " + body;
-
+    var err = new Error(body);
+    err.code = code;
     return err;
   }
 
@@ -265,7 +283,8 @@ function Api(opts) {
       } 
 
       if (err) {
-        logger.debug("Error: " + err);
+        emitter.emit('serverError', err.code);
+        logger.debug("serverError: " + err);
       } else {
         logger.debug("ArchivesSpace Response: " + res.statusCode + " : " + JSON.stringify(body));
       }
@@ -281,7 +300,8 @@ function Api(opts) {
     var json;
 
     doGetRaw(uri, function(err, res, body) {
-      if (res.statusCode == 200) {
+
+      if (res && res.statusCode == 200) {
         json = JSON.parse(body);
       }
       callback(err, json);
@@ -383,12 +403,7 @@ function Api(opts) {
     }
 
     return results.join("\n");
-
   };
-
-
 }
-
-
 
 module.exports = Api;
