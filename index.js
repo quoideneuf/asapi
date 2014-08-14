@@ -57,7 +57,7 @@ function Api(opts) {
 
       callback(err, json);
     });
-  }      
+  }
 
 
   this.login = function(opts, callback) {
@@ -108,7 +108,7 @@ function Api(opts) {
       if (res.statusCode == 200) {
         var importError = parseError(body);
         callback(null, importError);
-      } 
+      }
     });
   };
 
@@ -161,6 +161,14 @@ function Api(opts) {
 
 
   this.createJob = function(job, callback) {
+    for (var i = 0; i < job.files.length; i++) {
+      if (!fs.existsSync(job.files[i])) {
+        var err = new Error("File " + job.files[i] + " does not exist");
+        callback(err);
+        return;
+      }
+    };
+
     var form = new FormData();
     form.append('job', JSON.stringify(job));
     for (var i=0; i < job.files.length; i++) {
@@ -229,11 +237,35 @@ function Api(opts) {
   };
 
 
-  function expand(path) {
-
+  function resolvePath(path) {
     if (active_repo) {
       path = path.replace(":repo_id", active_repo);
     }
+
+    return path;
+  };
+
+
+  function getASHost() {
+    if (typeof(backend_url) == 'undefined') {
+      throw "Missing base url for REST api";
+    }
+
+    return backend_url.replace(/https?:\/\//, "").replace(/:\d+$/, "");
+  };
+
+
+  function getASPort() {
+    if (typeof(backend_url) == 'undefined') {
+      throw "Missing base url for REST api";
+    }
+
+    return backend_url.replace(/.*:/, "");
+  };
+
+
+  function expand(path) {
+    path = resolvePath(path);
 
     if (typeof(backend_url) == 'undefined') {
       throw "Missing base url for REST api";
@@ -280,7 +312,7 @@ function Api(opts) {
 
       if (!err && res.statusCode != 200) {
         err = serverError(res.statusCode, body);
-      } 
+      }
 
       if (err) {
         emitter.emit('serverError', err.code);
@@ -315,7 +347,7 @@ function Api(opts) {
       headers: {
         'X-ArchivesSpace-Session': session
       }
-    };    
+    };
 
     request.del(opts, function(err, res, body) {
 
@@ -355,32 +387,25 @@ function Api(opts) {
 
 
   function doPostForm(path, form, callback) {
-    
 
     var opts = {
-      url: expand(path),
+      host: getASHost(),
+      port: getASPort(),
+      path: resolvePath(path),
       headers: {
         'X-ArchivesSpace-Session': session
       }
     };
 
-    form.getLength(function(err, length) {
-      if (err) throw err;
-
-      var r = request.post(opts, function(err, res, body) {
-        logger.debug("ASpace Response: " + res.statusCode + " : " + body);
-
-        json = JSON.parse(body);
-        callback(err, json);
+    form.submit(opts, function(err, res) {
+      res.on('data', function(data) {
+        var job = JSON.parse(data);
+        callback(err, job);
       });
 
-      r._form = form;
-      r.setHeader('content-length', length);
     });
-
   }
-  
-  
+
 
   function parseError(body) {
 
@@ -394,7 +419,7 @@ function Api(opts) {
     while (loginfo.length > 1) {
       var filename = loginfo.shift();
       var match = loginfo.shift().match(/Error:.*/);
-      
+
       if (match) {
         results.push(filename + " -> " + match[0]);
       } else {

@@ -1,3 +1,4 @@
+var fs = require('fs');
 
 var Api = require('./index.js')
 var api = new Api({
@@ -101,3 +102,46 @@ exports.createResource = function(test) {
   });
 };
 
+
+exports.createJobError = function(test) {
+  test.expect(1);
+
+  var job = {
+    import_type: 'ead_xml',
+    files: [ 'no-such-file.xml' ]
+  };
+
+  api.createJob(job, function(err, json) {
+    test.equal(err.name, "Error");
+    test.done();
+  });
+}
+
+
+exports.createJob = {
+  setUp: function(cb) {
+    fs.writeFileSync("test-ead.xml", "<ead></ead>");
+    cb();
+  },
+
+  tearDown: function(cb) {
+    fs.unlinkSync("test-ead.xml");
+    cb();
+  },
+
+
+  createJob: function(test) {
+    test.expect(1);
+
+    var job = {
+      import_type: 'ead_xml',
+      filenames: [ 'test-ead.xml' ],
+      files: [ 'test-ead.xml' ]
+    };
+
+    api.createJob(job, function(err, json) {
+      test.ok(json.uri);
+      test.done();
+    });
+  }
+};

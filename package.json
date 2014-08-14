@@ -11,6 +11,8 @@
     "rest",
     "client"
   ],
+  "bugs": "https://github.com/lcdhoffman/asapi/issues",
+  "homepage": "https://github.com/lcdhoffman/asapi",
   "author": "Brian Hoffman <brianjhoffman@gmail.com>",
   "license": "ISC",
   "dependencies": {
