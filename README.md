@@ -12,7 +12,8 @@ Install:
 Use:
 
 ```javascript
-var api = new require('asapi')({url:"http://localhost:4567"});
+var Api = require('asapi');
+var api = new Api({url:"http://localhost:8089"});
 api.ping(function(err, json) {
   console.log("ArchivesSpace version: " + json.archivesSpaceVersion);
 });
@@ -23,6 +24,7 @@ Test:
     $ npm install nodeunit -g
     $ nodeunit test.js
 
+Note: ArchivesSpace should be running on port 8089, using a test database.
 
 ## Examples
 
@@ -52,3 +54,5 @@ api.eachResource(function(resource) {
 });
 
 ```
+
+See the companion [command line tool](https://github.com/lcdhoffman/as_cli) for more examples.
