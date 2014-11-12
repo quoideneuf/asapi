@@ -21,8 +21,8 @@ api.ping(function(err, json) {
 
 Test:
 
-    $ npm install nodeunit -g
-    $ nodeunit test.js
+    $ npm install jasmine-node -g
+    $ jasmine-node spec
 
 Note: ArchivesSpace should be running on port 8089, using a test database.
 
@@ -53,6 +53,34 @@ api.eachResource(function(resource) {
 
 });
 
+```
+
+## Promises (0.1.0 and up)
+
+You can use this library with promises. You need to wrap whatever promise provider you want to use when constructing the client:
+
+```javascript
+var Q = require('q');
+
+var api = new Api({
+  url:'http://localhost:8089',
+  active_repo: 2,
+  promiseFactory: function() {
+    var q = Q.defer();
+
+    return {
+      resolve: d.resolve,
+      reject: d.reject,
+      promise: d.promise
+    }
+  }
+});
+
+api.ping().then(function(json) {
+  console.log(json.archivesSpaceVersion);
+}).catch(function(error) {
+  console.log(error.message);
+});
 ```
 
 See the companion [command line tool](https://github.com/lcdhoffman/as_cli) for more examples.
