@@ -55,6 +55,8 @@ api.eachResource(function(resource) {
 
 ```
 
+See the companion [command line tool](https://github.com/lcdhoffman/as_cli) for more examples.
+
 ## Promises (0.1.0 and up)
 
 You can use this library with promises. You need to wrap whatever promise provider you want to use when constructing the client:
@@ -66,7 +68,7 @@ var api = new Api({
   url:'http://localhost:8089',
   active_repo: 2,
   promiseFactory: function() {
-    var q = Q.defer();
+    var d = Q.defer();
 
     return {
       resolve: d.resolve,
@@ -82,5 +84,3 @@ api.ping().then(function(json) {
   console.log(error.message);
 });
 ```
-
-See the companion [command line tool](https://github.com/lcdhoffman/as_cli) for more examples.
