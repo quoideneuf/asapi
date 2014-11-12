@@ -2,7 +2,7 @@ var fs = require('fs');
 
 var Api = require('./index.js')
 var api = new Api({
-  url:'http://localhost:8089',
+  url:'http://localhost:4567',
   active_repo: 2
 })
 

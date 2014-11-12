@@ -20,7 +20,7 @@ function Api(opts) {
   if (typeof(logger) == 'undefined') {
     logger = new (winston.Logger)({
       transports: [
-        new (winston.transports.Console)({ level: 'info' })
+        new (winston.transports.Console)({ level: 'debug' })
       ]
     });
   }
@@ -34,7 +34,7 @@ function Api(opts) {
   logger.debug("Backend url: " + backend_url);
 
   this.ping = function(callback) {
-    doGet("/", function(err, json) {
+    doGet("/", {}, function(err, json) {
       if (err) {
         logger.debug("Error " + err);
       } else {
@@ -91,13 +91,18 @@ function Api(opts) {
   }
 
 
-  this.get = function(uri, callback) {
-    doGet(uri, callback);
+  this.get = function(uri, opts, callback) {
+    if (typeof(opts) == 'function') {
+      callback = opts;
+      opts = {};
+    }
+
+    doGet(uri, opts, callback);
   }
 
 
   this.getJobs = function(opts, callback) {
-    doGet("/repositories/:repo_id/jobs?page=" + opts.page, function(err, json) {
+    doGet("/repositories/:repo_id/jobs?page=" + opts.page, {}, function(err, json) {
       callback(err, json);
     });
   };
@@ -113,8 +118,28 @@ function Api(opts) {
   };
 
 
+  this.getUpdates = function(last_sequence, callback) {
+    if (typeof(last_sequence) === 'function') {
+      callback = last_sequence;
+      last_sequence = 0;
+    }
+
+    this.get("/update-feed?last_sequence=" + last_sequence, callback);
+  };
+
+
+  this.getNotifications = function(last_sequence, callback) {
+    if (typeof(last_sequence) === 'function') {
+      callback = last_sequence;
+      last_sequence = 0;
+    }
+
+    this.get("/notifications?last_sequence=" + last_sequence, callback);
+  };
+
+
   this.getRepositories = function(callback) {
-    doGet("/repositories", function(err, json) {
+    doGet("/repositories", {}, function(err, json) {
       callback(err, json);
     });
   };
@@ -125,7 +150,7 @@ function Api(opts) {
       page = 1;
     }
 
-    doGet("/repositories/:repo_id/resources?page=" + page, function(err, json) {
+    doGet("/repositories/:repo_id/resources?page=" + page, {}, function(err, json) {
       callback(err, json);
 
       if (!err && json.last_page > page) {
@@ -327,9 +352,19 @@ function Api(opts) {
   };
 
   // get JSON
-  function doGet(uri, callback) {
+  function doGet(uri, opts, callback) {
 
     var json;
+
+    if (Object.keys(opts).length > 0) {
+      uri += "?"
+      for (i=0; i < Object.keys(opts).length; i++){
+        uri += Object.keys(opts)[i];
+        uri += "="
+        uri += opts[Object.keys(opts)[i]];
+        if (i < Object.keys(opts).length - 1) uri += "&";
+      }
+    }
 
     doGetRaw(uri, function(err, res, body) {
 
