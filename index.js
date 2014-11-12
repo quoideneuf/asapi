@@ -13,6 +13,7 @@ function Api(opts) {
   var active_repo = opts.active_repo;
   var logger = opts.logger;
   var emitter = opts.emitter;
+  var promiseFactory = opts.promiseFactory
 
   var that = this;
 
@@ -31,18 +32,8 @@ function Api(opts) {
   }
 
 
-  logger.debug("Backend url: " + backend_url);
-
   this.ping = function(callback) {
-    doGet("/", {}, function(err, json) {
-      if (err) {
-        logger.debug("Error " + err);
-      } else {
-        logger.debug(JSON.stringify(json));
-      }
-
-      callback(err, json);
-    });
+    return doGet("/", {}, callback);
   }
 
 
@@ -186,11 +177,14 @@ function Api(opts) {
 
 
   this.createJob = function(job, callback) {
+    var d = promiseFactory();
+
     for (var i = 0; i < job.files.length; i++) {
       if (!fs.existsSync(job.files[i])) {
         var err = new Error("File " + job.files[i] + " does not exist");
-        callback(err);
-        return;
+        d.reject(err);
+        if (callback) callback(err);
+        return d.promise;
       }
     };
 
@@ -201,47 +195,47 @@ function Api(opts) {
       form.append('files[' + i + ']', fs.createReadStream(filepath));
     }
 
+
     doPostForm("/repositories/:repo_id/jobs", form, function(err, json) {
       if (!err && json.status != 'Created') {
         err = "Job Status error: " + json.status;
       }
-      callback(err, json);
+
+      if (err) {
+        d.reject(err);
+      } else {
+        d.resolve(json);
+      }
+
+      if (callback) callback(err, json);
     });
+
+    return d.promise;
   };
 
 
   this.createRepository = function(obj, callback) {
-    doPost("/repositories", obj, function(err, json) {
-      callback(err, json);
-    });
+    return doPost("/repositories", obj, callback);
   };
 
 
   this.createLocation = function(obj, callback) {
-    doPost("/locations", obj, function(err, json) {
-      callback(err, json);
-    });
+    return doPost("/locations", obj, callback);
   };
 
 
   this.createClassification = function(obj, callback) {
-    doPost("/repositories/:repo_id/classifications", obj, function(err, json) {
-      callback(err, json);
-    });
+    return doPost("/repositories/:repo_id/classifications", obj, callback);
   };
 
 
   this.createAccession = function(obj, callback) {
-    doPost("/repositories/:repo_id/accessions", obj, function(err, json) {
-      callback(err, json);
-    });
+    return doPost("/repositories/:repo_id/accessions", obj, callback);
   };
 
 
   this.createResource = function(obj, callback) {
-    doPost("/repositories/:repo_id/resources", obj, function(err, json) {
-      callback(err, json);
-    });
+    return doPost("/repositories/:repo_id/resources", obj, callback);
   };
 
 
@@ -336,12 +330,14 @@ function Api(opts) {
     request(opts, function(err, res, body) {
 
       if (!err && res.statusCode != 200) {
-        err = serverError(res.statusCode, body);
+        logger.debug("Making ASpaceError object");
+        err = new ASpaceError(res.statusCode, body);
       }
 
+      console.log(err);
+
       if (err) {
-        emitter.emit('serverError', err.code);
-        logger.debug("serverError: " + err);
+        logger.debug("serverError: " + err.name);
       } else {
         logger.debug("ArchivesSpace Response: " + res.statusCode + " : " + JSON.stringify(body));
       }
@@ -354,6 +350,7 @@ function Api(opts) {
   // get JSON
   function doGet(uri, opts, callback) {
 
+    var d = promiseFactory();    
     var json;
 
     if (Object.keys(opts).length > 0) {
@@ -368,11 +365,19 @@ function Api(opts) {
 
     doGetRaw(uri, function(err, res, body) {
 
+      console.log(err);
       if (res && res.statusCode == 200) {
         json = JSON.parse(body);
       }
-      callback(err, json);
+
+      if (err) d.reject(err);
+      else d.resolve(json);
+
+
+      if (callback) callback(err, json);
     });
+
+    return d.promise;
   };
 
 
@@ -399,6 +404,7 @@ function Api(opts) {
 
   function doPost(path, obj, callback) {
 
+    var d = promiseFactory();
     var opts = {
       url: expand(path),
       headers: {
@@ -407,17 +413,24 @@ function Api(opts) {
       json: obj
     };
 
+    logger.debug("Posting" + JSON.stringify(opts));
+
     request.post(opts, function(err, res, body) {
 
       logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
 
       if (!err && res.statusCode != 200) {
-        serverError(res.statusCode, body.error);
+        logger.debug("Making ASpaceError object");
+        err = new ASpaceError(res.statusCode, body);
       }
 
-      callback(err, body);
+      if (err) d.reject(err);
+      else d.resolve(body);
+
+      if (callback) callback(err, body);
     });
 
+    return d.promise;
   };
 
 
@@ -463,7 +476,16 @@ function Api(opts) {
     }
 
     return results.join("\n");
-  };
+  }
+
+
+  function ASpaceError(code, response) {
+    this.name = "ArchivesSpace Error " + code;
+    this.message = response.error;
+  }
+
+  ASpaceError.prototype = new Error();
+  ASpaceError.prototype.constructor = ASpaceError;
 }
 
 module.exports = Api;

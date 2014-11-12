@@ -1,7 +1,8 @@
 {
   "name": "asapi",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "node js archivesspace rest client",
+  "repository": "https://github.com/quoideneuf/asapi",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,14 +12,17 @@
     "rest",
     "client"
   ],
-  "bugs": "https://github.com/lcdhoffman/asapi/issues",
-  "homepage": "https://github.com/lcdhoffman/asapi",
+  "bugs": "https://github.com/quoideneuf/asapi/issues",
+  "homepage": "https://github.com/quoideneuf/asapi",
   "author": "Brian Hoffman <brianjhoffman@gmail.com>",
   "license": "ISC",
   "dependencies": {
     "form-data": "^0.1.4",
-    "repl.history": "^0.1.1",
-    "request": "^2.39.0",
+    "request": "^2.48.0",
     "winston": "^0.7.3"
+  },
+  "devDependencies": {
+    "nock": "^0.48.2",
+    "q": "^1.1.1"
   }
 }
