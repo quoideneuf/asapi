@@ -260,7 +260,7 @@ describe("As", function() {
     });
 
 
-    xit('handles an error', function(done) {
+    it('handles an error', function(done) {
       var job = {
         import_type: 'ead_xml',
         files: [ 'no-such-file.xml' ]

@@ -1,10 +1,10 @@
-var fs = require('fs');
-var path = require('path');
-var winston = require('winston');
 
-var request = require('request');
-var FormData = require('form-data');
-var EventEmitter = require('events').EventEmitter;
+var request = require('./lib/request');
+
+var formDataFactory = require('./lib/form-data-factory.js');
+var fileLoader = require('./lib/file-loader.js');
+var loggerFactory = require('./lib/log-factory.js');
+
 
 function Api(opts) {
   opts = opts || {};
@@ -12,23 +12,26 @@ function Api(opts) {
   var backend_url = opts.url;
   var active_repo = opts.active_repo;
   var logger = opts.logger;
-  var emitter = opts.emitter;
   var promiseFactory = opts.promiseFactory
 
   var that = this;
 
 
-  if (typeof(logger) == 'undefined') {
-    logger = new (winston.Logger)({
-      transports: [
-        new (winston.transports.Console)({ level: 'debug' })
-      ]
-    });
+  if (typeof(logger) === 'undefined') {
+    logger = loggerFactory();
   }
 
 
-  if (typeof(emitter) == 'undefined') {
-    emitter = new EventEmitter();
+  if (typeof(promiseFactory) === 'undefined') {
+    promiseFactory = function() {
+      return {
+        resolve: function(){},
+        reject: function(){},
+        promise: {
+          then: function(){}
+        }
+      }
+    }
   }
 
 
@@ -180,7 +183,7 @@ function Api(opts) {
     var d = promiseFactory();
 
     for (var i = 0; i < job.files.length; i++) {
-      if (!fs.existsSync(job.files[i])) {
+      if (!fileLoader.existsSync(job.files[i])) {
         var err = new Error("File " + job.files[i] + " does not exist");
         d.reject(err);
         if (callback) callback(err);
@@ -188,11 +191,11 @@ function Api(opts) {
       }
     };
 
-    var form = new FormData();
+    var form = formDataFactory();
     form.append('job', JSON.stringify(job));
     for (var i=0; i < job.files.length; i++) {
       var filepath = job.files[i];
-      form.append('files[' + i + ']', fs.createReadStream(filepath));
+      form.append('files[' + i + ']', fileLoader.createReadStream(filepath));
     }
 
 
@@ -244,11 +247,6 @@ function Api(opts) {
       callback(err, json);
     });
   };
-
-
-  this.on = function(event, callback) {
-    emitter.on(event, callback);
-  }
 
 
   function setSession(new_session) {
@@ -334,8 +332,6 @@ function Api(opts) {
         err = new ASpaceError(res.statusCode, body);
       }
 
-      console.log(err);
-
       if (err) {
         logger.debug("serverError: " + err.name);
       } else {
@@ -365,7 +361,6 @@ function Api(opts) {
 
     doGetRaw(uri, function(err, res, body) {
 
-      console.log(err);
       if (res && res.statusCode == 200) {
         json = JSON.parse(body);
       }
@@ -489,3 +484,7 @@ function Api(opts) {
 }
 
 module.exports = Api;
+
+if (window) {
+  window.Api = Api;
+}

@@ -45,7 +45,7 @@ api.eachResource(function(resource) {
 
   if (update) api.updateRecord(resource, function(err, body) {
     if (err)
-      console.log("uh oh " + err);
+      console.log(err);
     else {
       console.log(body);
     }
@@ -54,8 +54,6 @@ api.eachResource(function(resource) {
 });
 
 ```
-
-See the companion [command line tool](https://github.com/lcdhoffman/as_cli) for more examples.
 
 ## Promises (0.1.0 and up)
 
@@ -84,3 +82,17 @@ api.ping().then(function(json) {
   console.log(error.message);
 });
 ```
+
+## Browserification (in progress)
+
+To create a version for the browser and test it, check out the source code and do the following:
+
+```bash
+git clone git@github.com:quoideneuf/asapi.git
+npm install
+grunt browserify
+grunt karma
+```
+
+This requires Chrome. 
+
