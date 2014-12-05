@@ -96,3 +96,11 @@ grunt karma
 
 This requires Chrome. 
 
+## REPL
+
+To play around in REPL mode, start up ArchivesSpace on the default ports with the default admin user, and:
+
+```bash
+./scripts/repl.js
+>api.ping();
+```

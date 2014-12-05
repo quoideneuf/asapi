@@ -23,9 +23,44 @@ module.exports = function(grunt) {
           singleRun: true
         }
       }
-    }
+    },
+    jasmine_node: {
+      options: {
+        forceExit: true,
+        match: '.',
+        matchall: false,
+        extensions: 'js',
+        specNameMatcher: 'spec',
+        jUnit: {
+          report: true,
+          savePath : "./build/reports/jasmine/",
+          useDotNotation: true,
+          consolidate: true
+        }
+      },
+      all: ['spec/']
+    },
+    watch: {
+      options: {
+        livereload: 35730,
+      },
+      main: {
+        files: ['index.js'],
+        tasks: [
+          'browserify'
+        ]
+      }
+    },
+    // connect: {
+    //   options: {
+    //     port: 35730
+    //   }
+    // }
+      
   });
 
   grunt.loadNpmTasks('grunt-browserify');
   grunt.loadNpmTasks('grunt-karma');
+  grunt.loadNpmTasks('grunt-jasmine-node');
+  grunt.loadNpmTasks('grunt-contrib-watch');
 };

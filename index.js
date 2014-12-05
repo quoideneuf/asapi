@@ -9,8 +9,8 @@ var loggerFactory = require('./lib/log-factory.js');
 function Api(opts) {
   opts = opts || {};
   var session = opts.session;
-  var backend_url = opts.url;
-  var active_repo = opts.active_repo;
+  var backendUrl = opts.url;
+  var activeRepo = opts.activeRepo || opts.active_repo;
   var logger = opts.logger;
   var promiseFactory = opts.promiseFactory
 
@@ -25,13 +25,24 @@ function Api(opts) {
   if (typeof(promiseFactory) === 'undefined') {
     promiseFactory = function() {
       return {
-        resolve: function(){},
-        reject: function(){},
+        resolve: function(){
+        },
+        reject: function(){
+        },
         promise: {
-          then: function(){}
+          then: function(){
+            throw new Error("Called 'then' on stubbed Promise");
+          },
+          catch: function(){
+            throw new Error("Called 'catch' on stubbed Promise");
+          }
         }
       }
     }
+  }
+
+  this.injectRequestImplementation = function(newRequest) {
+    request = newRequest;
   }
 
 
@@ -39,18 +50,9 @@ function Api(opts) {
     return doGet("/", {}, callback);
   }
 
-
+  // Requires aspace_eraser plugin
   this.nuke = function(callback) {
-    doDelete("/", function(err, json) {
-
-      if (err) {
-        logger.debug("Error " + err);
-      } else {
-        logger.debug(JSON.stringify(json));
-      }
-
-      callback(err, json);
-    });
+    return doDelete("/", callback);
   }
 
 
@@ -58,9 +60,9 @@ function Api(opts) {
 
     var form = {form: {password: opts.password}};
 
-    request.post(backend_url + "/users/" + opts.user + "/login", form, function(err, response, body) {
+    request.post(backendUrl + "/users/" + opts.user + "/login", form, function(err, response, body) {
       if (response.statusCode == 403) {
-        var err = "Unauthorized";
+        var err = new Error("Unauthorized");
       }
 
       json = JSON.parse(body);
@@ -70,6 +72,9 @@ function Api(opts) {
     });
   };
 
+  this.logout = function() {
+    setSession(undefined);
+  }
 
   this.hasSession = function() {
     if (session) {
@@ -91,14 +96,14 @@ function Api(opts) {
       opts = {};
     }
 
-    doGet(uri, opts, callback);
+    return doGet(uri, opts, callback);
   }
 
 
   this.getJobs = function(opts, callback) {
-    doGet("/repositories/:repo_id/jobs?page=" + opts.page, {}, function(err, json) {
-      callback(err, json);
-    });
+    var opts = opts || {};
+    var page = opts.page || 1;
+    return doGet("/repositories/:repo_id/jobs?page=" + page, {}, callback);
   };
 
 
@@ -124,7 +129,7 @@ function Api(opts) {
 
   this.getNotifications = function(last_sequence, callback) {
     if (typeof(last_sequence) === 'function') {
-      callback = last_sequence;
+       callback = last_sequence;
       last_sequence = 0;
     }
 
@@ -139,28 +144,35 @@ function Api(opts) {
   };
 
 
-  this.getResources = function(callback, page) {
-    if (typeof(page) == 'undefined') {
-      page = 1;
+  this.getResources = function(opts, callback) {
+    if (typeof(opts) === 'function') {
+      callback = opts;
+      opts = {};
     }
 
-    doGet("/repositories/:repo_id/resources?page=" + page, {}, function(err, json) {
+    var page = opts.page || 1;
+    
+    doGet("/repositories/:repo_id/resources", opts, function(err, json) {
       callback(err, json);
-
-      if (!err && json.last_page > page) {
-        that.getResources(callback, page + 1)
-      }
     });
   };
 
 
-  this.eachResource = function(callback) {
-    that.getResources(function(err, json) {
+  this.eachResource = function(callback, page) {
+    if (typeof(page) === 'undefined') {
+      page = 1;
+    }
+
+    that.getResources({page: page}, function(err, json) {
       if (err) {
-        logger.info("Unable to get Resource records due to error.");
+        callback(err);
       } else {
         for (var i = 0; i < json.results.length; i++) {
-          callback(json.results[i]);
+          callback(err, json.results[i]);
+        }
+
+        if (json.last_page > page) {
+          that.eachResource(callback, page + 1);
         }
       }
     });
@@ -168,14 +180,7 @@ function Api(opts) {
 
 
   this.updateRecord = function(rec, callback) {
-    doPost(rec.uri, rec, function(err, body) {
-      if (err) {
-        logger.debug("Error updating " + rec.uri);
-      } else {
-        logger.debug("Updated " + rec.uri);
-      }
-      callback(err, rec.uri);
-    });
+    return doPost(rec.uri, rec, callback);
   };
 
 
@@ -243,9 +248,7 @@ function Api(opts) {
 
 
   this.createDigitalObject = function(obj, callback) {
-    doPost("/repositories/:repo_id/digital_objects", obj, function(err, json) {
-      callback(err, json);
-    });
+    return doPost("/repositories/:repo_id/digital_objects", obj, callback);
   };
 
 
@@ -255,8 +258,8 @@ function Api(opts) {
 
 
   function resolvePath(path) {
-    if (active_repo) {
-      path = path.replace(":repo_id", active_repo);
+    if (activeRepo) {
+      path = path.replace(":repo_id", activeRepo);
     }
 
     return path;
@@ -264,31 +267,31 @@ function Api(opts) {
 
 
   function getASHost() {
-    if (typeof(backend_url) == 'undefined') {
+    if (typeof(backendUrl) === 'undefined') {
       throw "Missing base url for REST api";
     }
 
-    return backend_url.replace(/https?:\/\//, "").replace(/:\d+$/, "");
+    return backendUrl.replace(/https?:\/\//, "").replace(/:\d+$/, "");
   };
 
 
   function getASPort() {
-    if (typeof(backend_url) == 'undefined') {
+    if (typeof(backendUrl) == 'undefined') {
       throw "Missing base url for REST api";
     }
 
-    return backend_url.replace(/.*:/, "");
+    return backendUrl.replace(/.*:/, "");
   };
 
 
   function expand(path) {
     path = resolvePath(path);
 
-    if (typeof(backend_url) == 'undefined') {
+    if (typeof(backendUrl) == 'undefined') {
       throw "Missing base url for REST api";
     }
 
-    return backend_url + path;
+    return backendUrl + path;
   }
 
 
@@ -314,7 +317,6 @@ function Api(opts) {
 
 
   function doGetRaw(uri, callback) {
-
     var opts = {
       url: expand(uri),
       headers: {}
@@ -325,15 +327,14 @@ function Api(opts) {
     }
 
 
-    request(opts, function(err, res, body) {
+    request.get(opts, function(err, res, body) {
 
       if (!err && res.statusCode != 200) {
-        logger.debug("Making ASpaceError object");
         err = new ASpaceError(res.statusCode, body);
       }
 
       if (err) {
-        logger.debug("serverError: " + err.name);
+        logger.debug("Server Error: " + err.name);
       } else {
         logger.debug("ArchivesSpace Response: " + res.statusCode + " : " + JSON.stringify(body));
       }
@@ -345,6 +346,8 @@ function Api(opts) {
 
   // get JSON
   function doGet(uri, opts, callback) {
+    if (opts === undefined)
+      opts = {}    
 
     var d = promiseFactory();    
     var json;
@@ -377,6 +380,7 @@ function Api(opts) {
 
 
   function doDelete(path, callback) {
+    var d = promiseFactory();
     var opts = {
       url: expand(path),
       headers: {
@@ -389,16 +393,20 @@ function Api(opts) {
       logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
 
       if (!err && res.statusCode != 200) {
-        serverError(res.statusCode, body.error);
+        err = new ASpaceError(res.statusCode, body);
       }
 
-      callback(err, body);
+      if (err) d.reject(err);
+      else d.resolve(body);
+
+      if (callback) callback(err, body);
     });
+
+    return d.promise;
   };
 
 
   function doPost(path, obj, callback) {
-
     var d = promiseFactory();
     var opts = {
       url: expand(path),
@@ -415,7 +423,6 @@ function Api(opts) {
       logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
 
       if (!err && res.statusCode != 200) {
-        logger.debug("Making ASpaceError object");
         err = new ASpaceError(res.statusCode, body);
       }
 
@@ -481,10 +488,11 @@ function Api(opts) {
 
   ASpaceError.prototype = new Error();
   ASpaceError.prototype.constructor = ASpaceError;
+
 }
 
 module.exports = Api;
 
-if (window) {
+if (typeof(window) != 'undefined') {
   window.Api = Api;
 }

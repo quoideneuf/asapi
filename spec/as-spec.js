@@ -3,6 +3,8 @@ var fs = require('fs');
 var nock = require('nock');
 var Q = require('q');
 
+var fx = require('./fixtures.js');
+
 var ASUrl = 'http://localhost:8089';
 
 var As = require('../index.js');
@@ -66,37 +68,40 @@ describe("As", function() {
   });
 
 
-  xdescribe(".createRepository", function() {
-    beforeEach(function() {
-      randomRepo = function() {
-        return {
-          repo_code: Math.random().toString(36).substring(7),
-          name: Math.random().toString(36).substring(7)
-          };
-      }
-    });
-
-    beforeEach(function(done) {
-      login(function() {
-        done();
-      });
-    });
+  describe(".createRepository", function() {
 
     describe('callback signature', function() {
 
       it("should pass the created repository object to the callback", function(done) {
-        as.createRepository(randomRepo(), function(err, json) {
-          expect(json.uri).toMatch(/repositories\/\d/);
+        var scope = nock(ASUrl).post('/repositories').reply(200, JSON.stringify({"status":"Created","id":99,"lock_version":0,"stale":null,"uri":"/repositories/99","warnings":[]}));
+
+        as.createRepository(fx.repo(), function(err, json) {
+          expect(json.uri).toMatch(/repositories\/99/);
+          nock.cleanAll();
           done();
         });
       });
     });
 
+
     describe('promise signature', function() {
 
       it("should return a promise", function(done) {
-        as.createRepository(randomRepo()).then(function(json) {
-          expect(json.uri).toMatch(/repositories\/\d/);
+        var scope = nock(ASUrl).post('/repositories').reply(200, JSON.stringify({"status":"Created","id":99,"lock_version":0,"stale":null,"uri":"/repositories/99","warnings":[]}));
+
+        as.createRepository(fx.repo()).then(function(json) {
+          expect(json.uri).toMatch(/repositories\/99/);
+          nock.cleanAll();
+          done();
+        });
+      });
+
+      it('should reject with an error if AS barfs', function(done) {
+        var scope = nock(ASUrl).post('/repositories').reply(400, JSON.stringify({"error":{"repo_code":["Property is required but was missing"]},"warning":null,"invalid_object":"#<JSONModel(:repository) {\"name\"=>\"dfdsf\", \"jsonmodel_type\"=>\"repository\"}>"}));
+
+        as.createRepository(fx.repo()).catch(function(err) {
+          expect(err.name).toEqual("ArchivesSpace Error 400");
+          nock.cleanAll();
           done();
         });
       });
@@ -106,19 +111,10 @@ describe("As", function() {
 
   describe('.createClassification', function() {
 
-    beforeEach(function() {
-      randomClass = function() {
-        return {
-          identifier: Math.random().toString(36).substring(7),
-          title: Math.random().toString(36).substring(7)
-        };
-      };
-    });
-
     describe('callback signature', function() {
 
       it('should pass the created location object to the callback', function(done) {
-        as.createClassification(randomClass(), function(err, json) {
+        as.createClassification(fx.classification(), function(err, json) {
           expect(json.uri).toMatch(/classifications\/\d/);
           done();
         });
@@ -128,7 +124,7 @@ describe("As", function() {
     describe('promise signature', function() {
 
       it("should return a promise", function(done) {
-        as.createClassification(randomClass()).then(function(json) {
+        as.createClassification(fx.classification()).then(function(json) {
           expect(json.uri).toMatch(/classifications\/\d/);
           done();
         }).catch(function(err) {
@@ -140,19 +136,11 @@ describe("As", function() {
 
 
   describe('.createLocation', function() {
-    beforeEach(function() {
-      randomLoc = function() {
-        return {
-          building: Math.random().toString(36).substring(7),
-          classification: Math.random().toString(36).substring(7)
-        };
-      }
-    });
 
     describe('callback signature', function() {
 
       it('should pass the created location object to the callback', function(done) {
-        as.createLocation(randomLoc(), function(err, json) {
+        as.createLocation(fx.location(), function(err, json) {
           expect(json.uri).toMatch(/locations\/\d/);
           done();
         });
@@ -162,7 +150,7 @@ describe("As", function() {
     describe('promise signature', function() {
 
       it("should return a promise", function(done) {
-        as.createLocation(randomLoc()).then(function(json) {
+        as.createLocation(fx.location()).then(function(json) {
           expect(json.uri).toMatch(/locations\/\d/);
           done();
         });
@@ -172,20 +160,11 @@ describe("As", function() {
 
 
   describe('.createAccession', function() {
-    beforeEach(function() {
-      randomAcc = function() {
-        return {
-          id_0: Math.random().toString(36).substring(7),
-          title: Math.random().toString(36).substring(7),
-          accession_date: "2001-01-01"
-        };
-      }
-    });
 
     describe('callback signature', function() {
 
       it('should pass the created location object to the callback', function(done) {
-        as.createAccession(randomAcc(), function(err, json) {
+        as.createAccession(fx.accession(), function(err, json) {
           expect(json.uri).toMatch(/accessions\/\d/);
           done();
         });
@@ -195,7 +174,7 @@ describe("As", function() {
     describe('promise signature', function() {
 
       it("should return a promise", function(done) {
-        as.createAccession(randomAcc()).then(function(json) {
+        as.createAccession(fx.accession()).then(function(json) {
           expect(json.uri).toMatch(/accessions\/\d/);
           done();
         });
@@ -205,23 +184,11 @@ describe("As", function() {
 
 
   describe('.createResource', function() {
-    beforeEach(function() {
-      randomRes = function() {
-        return {
-          id_0: Math.random().toString(36).substring(7),
-          title: Math.random().toString(36).substring(7),
-          level: "collection",
-          extents: [{number: "1",
-                     portion: "whole",
-                     extent_type: "linear_feet"}]
-        };
-      }
-    });
 
     describe('callback signature', function() {
 
       it('should pass the created location object to the callback', function(done) {
-        as.createResource(randomRes(), function(err, json) {
+        as.createResource(fx.resource(), function(err, json) {
           expect(json.uri).toMatch(/resources\/\d/);
           done();
         });
@@ -231,13 +198,37 @@ describe("As", function() {
     describe('promise signature', function() {
 
       it("should return a promise", function(done) {
-        as.createResource(randomRes()).then(function(json) {
+        as.createResource(fx.resource()).then(function(json) {
           expect(json.uri).toMatch(/resources\/\d/);
           done();
         });
       });
     });
   }); // /.createResource
+
+
+  describe('.createDigitalObject', function() {
+
+    describe('callback signature', function() {
+
+      it('should pass the created location object to the callback', function(done) {
+        as.createDigitalObject(fx.digital_object(), function(err, json) {
+          expect(json.uri).toMatch(/digital_objects\/\d/);
+          done();
+        });
+      });
+    });
+
+    describe('promise signature', function() {
+
+      it("should return a promise", function(done) {
+        as.createDigitalObject(fx.digital_object()).then(function(json) {
+          expect(json.uri).toMatch(/digital_objects\/\d/);
+          done();
+        });
+      });
+    });
+  }); // /.createDigitalObject
 
 
   describe('.createJob', function() {
@@ -295,11 +286,75 @@ describe("As", function() {
     });
   }); // /.createJob
 
+  describe('.updateRecord', function() {
+    beforeEach(function(done) {
+      vals = {}
+      as.createAccession(fx.accession()).then(function(json) {
+        vals.uri = json.uri;
+        vals.title = json.title;
+        vals.lock_version = json.lock_version;
+        done();
+      });
+    });
+
+    it('updates a json object and returns the updated object', function(done) {
+      var newVals = fx.accession();
+      newVals.uri = vals.uri;
+      newVals.lock_version = vals.lock_version;
+
+      as.updateRecord(newVals).then(function(json) {
+        expect(json.uri).toEqual(vals.uri);
+        expect(json.lock_version).toEqual(1);
+        done();
+      })
+    });
+  });
 
 
+  describe('.getResources', function() {
+
+    it('returns a page worth of resources as an object', function(done) {
+      var scope = nock(ASUrl).get('/repositories/2/resources?page=2').reply(200, fx.mockGetResources(2,3));
+
+      as.getResources({page: 2}, function(err, response) {
+        expect(response.this_page).toEqual(2);
+        expect(response.last_page).toEqual(3);
+        expect(response.results.length).toEqual(10);
+        nock.cleanAll();
+        done();
+      });
+    });
+  });
+
+
+  describe('.eachResource', function() {
+    afterEach(function() {
+      nock.cleanAll();
+    });
+
+    it('iterates over the collection of resources', function(done) {
+      nock(ASUrl).get('/repositories/2/resources?page=1').reply(200, fx.mockGetResources(1,2));
+      nock(ASUrl).get('/repositories/2/resources?page=2').reply(200, fx.mockGetResources(2,2));
+      var count = 0;
+
+      as.eachResource(function(err, resource) {
+        if(resource.id_0.length) count++
+      })
+
+      setTimeout(function() {
+        expect(count).toEqual(20);
+        done();
+      }, 500);
+    });
+
+    it('bubbles an error if there\'s a problem with the request', function(done) {
+      nock(ASUrl).get('/repositories/2/resources?page=1').reply(403);
+
+      as.eachResource(function(err, resource) {
+        expect(err.name).toEqual("ArchivesSpace Error 403");
+        done();
+      });
+    });
+  });
 
 }); // /describe As
-
-
-
-
