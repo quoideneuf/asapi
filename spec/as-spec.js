@@ -33,9 +33,15 @@ describe("As", function() {
 
   beforeEach(function(done) {
     login(function() {
-        done();
-      });
+      done();
     });
+  //  nock.cleanAll();
+  });
+
+  afterEach(function() {
+    nock.cleanAll();
+  });
+
 
   describe(".ping", function() {
 
@@ -61,14 +67,24 @@ describe("As", function() {
         done();
       }).catch(function(error) {
         expect(error.name).toEqual('ArchivesSpace Error 404');
-        nock.cleanAll();
         done();        
       });
+    });
+
+    it('emits an archivesSpaceServerError event if the server returns a 404', function(done) {
+      var scope = nock(ASUrl).get('/').reply(404);
+
+      as.once('archivesSpaceServerError', function(err) {
+        expect(err.code).toEqual(404);
+        done();
+      });
+
+      as.ping();
     });
   });
 
 
-  describe(".createRepository", function() {
+   describe(".createRepository", function() {
 
     describe('callback signature', function() {
 
@@ -77,7 +93,7 @@ describe("As", function() {
 
         as.createRepository(fx.repo(), function(err, json) {
           expect(json.uri).toMatch(/repositories\/99/);
-          nock.cleanAll();
+//          nock.cleanAll();
           done();
         });
       });
@@ -91,7 +107,6 @@ describe("As", function() {
 
         as.createRepository(fx.repo()).then(function(json) {
           expect(json.uri).toMatch(/repositories\/99/);
-          nock.cleanAll();
           done();
         });
       });
@@ -101,7 +116,6 @@ describe("As", function() {
 
         as.createRepository(fx.repo()).catch(function(err) {
           expect(err.name).toEqual("ArchivesSpace Error 400");
-          nock.cleanAll();
           done();
         });
       });
@@ -320,7 +334,6 @@ describe("As", function() {
         expect(response.this_page).toEqual(2);
         expect(response.last_page).toEqual(3);
         expect(response.results.length).toEqual(10);
-        nock.cleanAll();
         done();
       });
     });
@@ -328,9 +341,6 @@ describe("As", function() {
 
 
   describe('.eachResource', function() {
-    afterEach(function() {
-      nock.cleanAll();
-    });
 
     it('iterates over the collection of resources', function(done) {
       nock(ASUrl).get('/repositories/2/resources?page=1').reply(200, fx.mockGetResources(1,2));

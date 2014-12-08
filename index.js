@@ -5,6 +5,8 @@ var formDataFactory = require('./lib/form-data-factory.js');
 var fileLoader = require('./lib/file-loader.js');
 var loggerFactory = require('./lib/log-factory.js');
 
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 
 function Api(opts) {
   opts = opts || {};
@@ -57,16 +59,17 @@ function Api(opts) {
 
 
   this.login = function(opts, callback) {
-
     var form = {form: {password: opts.password}};
 
     request.post(backendUrl + "/users/" + opts.user + "/login", form, function(err, response, body) {
-      if (response.statusCode == 403) {
+      if (response && response.statusCode == 403) {
         var err = new Error("Unauthorized");
       }
 
-      json = JSON.parse(body);
-      session = json.session;
+      if (!err) {
+        json = JSON.parse(body);
+        session = json.session;
+      }
 
       if (callback) callback(err, session);
     });
@@ -151,7 +154,7 @@ function Api(opts) {
     }
 
     var page = opts.page || 1;
-    
+
     doGet("/repositories/:repo_id/resources", opts, function(err, json) {
       callback(err, json);
     });
@@ -329,15 +332,16 @@ function Api(opts) {
 
     request.get(opts, function(err, res, body) {
 
+      if (res && body)
+        logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
+
+
       if (!err && res.statusCode != 200) {
         err = new ASpaceError(res.statusCode, body);
       }
 
-      if (err) {
-        logger.debug("Server Error: " + err.name);
-      } else {
-        logger.debug("ArchivesSpace Response: " + res.statusCode + " : " + JSON.stringify(body));
-      }
+      if (err)
+        that.emit('archivesSpaceServerError', err);
 
       callback(err, res, body);
     });
@@ -347,9 +351,9 @@ function Api(opts) {
   // get JSON
   function doGet(uri, opts, callback) {
     if (opts === undefined)
-      opts = {}    
+      opts = {}
 
-    var d = promiseFactory();    
+    var d = promiseFactory();
     var json;
 
     if (Object.keys(opts).length > 0) {
@@ -371,7 +375,6 @@ function Api(opts) {
       if (err) d.reject(err);
       else d.resolve(json);
 
-
       if (callback) callback(err, json);
     });
 
@@ -389,7 +392,6 @@ function Api(opts) {
     };
 
     request.del(opts, function(err, res, body) {
-
       logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
 
       if (!err && res.statusCode != 200) {
@@ -420,14 +422,19 @@ function Api(opts) {
 
     request.post(opts, function(err, res, body) {
 
-      logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
+      if (res && body)
+        logger.debug("ASpace Response: " + res.statusCode + " : " + JSON.stringify(body));
 
       if (!err && res.statusCode != 200) {
         err = new ASpaceError(res.statusCode, body);
       }
 
-      if (err) d.reject(err);
-      else d.resolve(body);
+      if (err) {
+        d.reject(err);
+        that.emit('archivesSpaceServerError', err);
+      } else {
+        d.resolve(body);
+      }
 
       if (callback) callback(err, body);
     });
@@ -484,12 +491,15 @@ function Api(opts) {
   function ASpaceError(code, response) {
     this.name = "ArchivesSpace Error " + code;
     this.message = response.error;
+    this.code = code;
   }
 
   ASpaceError.prototype = new Error();
   ASpaceError.prototype.constructor = ASpaceError;
 
 }
+
+util.inherits(Api, EventEmitter);
 
 module.exports = Api;
 
