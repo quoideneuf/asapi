@@ -208,7 +208,9 @@ function Api(opts) {
 
 
     doPostForm("/repositories/:repo_id/jobs", form, function(err, json) {
-      if (!err && json.status != 'Created') {
+      if (!err && json.error) {
+        err = new Error(JSON.stringify(json.error));
+      } else if (!err && json.status != 'Created') {
         err = "Job Status error: " + json.status;
       }
 

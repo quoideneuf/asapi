@@ -35,7 +35,6 @@ describe("As", function() {
     login(function() {
       done();
     });
-  //  nock.cleanAll();
   });
 
   afterEach(function() {
@@ -93,7 +92,6 @@ describe("As", function() {
 
         as.createRepository(fx.repo(), function(err, json) {
           expect(json.uri).toMatch(/repositories\/99/);
-//          nock.cleanAll();
           done();
         });
       });
