@@ -59,9 +59,10 @@ function Api(opts) {
 
 
   this.login = function(opts, callback) {
-    var form = {form: {password: opts.password}};
+    var formOpts = {password: opts.password};
+    var loginUrl = backendUrl + "/users/" + opts.user + "/login";
 
-    request.post(backendUrl + "/users/" + opts.user + "/login", form, function(err, response, body) {
+    request.post({url: loginUrl, form: formOpts}, function(err, response, body) {
       if (response && response.statusCode == 403) {
         var err = new Error("Unauthorized");
       }
@@ -340,6 +341,10 @@ function Api(opts) {
 
       if (!err && res.statusCode != 200) {
         err = new ASpaceError(res.statusCode, body);
+      }
+
+      if (err && body) {
+        err = err + " " + JSON.stringify(body);
       }
 
       if (err)

@@ -18,4 +18,18 @@ describe('AS Api Client', function() {
       done();
     });
   });
+
+  it ('logs in', function(done) {
+    var opts = {
+      user: 'admin',
+      password: 'admin'
+    };
+
+    as.login(opts, function(err, session) {
+      expect(session).toMatch(/[\da-z]+/);
+      done();
+    });
+
+  });
+
 });
