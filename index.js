@@ -104,6 +104,11 @@ function Api(opts) {
   }
 
 
+  this.post = function(uri, obj, callback) {
+    return doPost(uri, obj, callback);
+  };
+
+
   this.getJobs = function(opts, callback) {
     var opts = opts || {};
     var page = opts.page || 1;
@@ -156,9 +161,7 @@ function Api(opts) {
 
     var page = opts.page || 1;
 
-    doGet("/repositories/:repo_id/resources", opts, function(err, json) {
-      callback(err, json);
-    });
+    return doGet("/repositories/:repo_id/resources", opts, callback);
   };
 
 
@@ -250,6 +253,11 @@ function Api(opts) {
 
   this.createResource = function(obj, callback) {
     return doPost("/repositories/:repo_id/resources", obj, callback);
+  };
+
+
+  this.createArchivalObject = function(obj, callback) {
+    return doPost("/repositories/:repo_id/archival_objects", obj, callback);
   };
 
 
