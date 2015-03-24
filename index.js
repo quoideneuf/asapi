@@ -365,6 +365,7 @@ function Api(opts) {
 
   // get JSON
   function doGet(uri, opts, callback) {
+
     if (opts === undefined)
       opts = {}
 
@@ -374,9 +375,19 @@ function Api(opts) {
     if (Object.keys(opts).length > 0) {
       uri += "?"
       for (i=0; i < Object.keys(opts).length; i++){
-        uri += Object.keys(opts)[i];
-        uri += "="
-        uri += opts[Object.keys(opts)[i]];
+        var paramName = Object.keys(opts)[i];
+        var paramVal = opts[Object.keys(opts)[i]];
+
+        if (typeof(paramVal) === 'object') {
+          for (j=0; j < Object.keys(paramVal).length; j++) {
+            uri += paramName + "[]=";
+            uri += paramVal[i];
+          }
+        } else {
+          uri += paramName;
+          uri += "="
+          uri += paramVal;
+        }
         if (i < Object.keys(opts).length - 1) uri += "&";
       }
     }

@@ -7,7 +7,8 @@ require('repl.history')(repl, process.env.HOME + '/.node_history');
 var Api = require('../index.js');
 var api = new Api(
   {
-    url: "http://localhost:8089", 
+//    url: "http://localhost:8089",
+    url: "http://localhost:4567",
     activeRepo: 2,
     promiseFactory: function() {
       var d = Q.defer();

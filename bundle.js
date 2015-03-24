@@ -105,6 +105,11 @@ function Api(opts) {
   }
 
 
+  this.post = function(uri, obj, callback) {
+    return doPost(uri, obj, callback);
+  };
+
+
   this.getJobs = function(opts, callback) {
     var opts = opts || {};
     var page = opts.page || 1;
@@ -157,9 +162,7 @@ function Api(opts) {
 
     var page = opts.page || 1;
 
-    doGet("/repositories/:repo_id/resources", opts, function(err, json) {
-      callback(err, json);
-    });
+    return doGet("/repositories/:repo_id/resources", opts, callback);
   };
 
 
@@ -251,6 +254,11 @@ function Api(opts) {
 
   this.createResource = function(obj, callback) {
     return doPost("/repositories/:repo_id/resources", obj, callback);
+  };
+
+
+  this.createArchivalObject = function(obj, callback) {
+    return doPost("/repositories/:repo_id/archival_objects", obj, callback);
   };
 
 
@@ -358,6 +366,7 @@ function Api(opts) {
 
   // get JSON
   function doGet(uri, opts, callback) {
+    console.log("raw");
     if (opts === undefined)
       opts = {}
 
@@ -367,13 +376,24 @@ function Api(opts) {
     if (Object.keys(opts).length > 0) {
       uri += "?"
       for (i=0; i < Object.keys(opts).length; i++){
-        uri += Object.keys(opts)[i];
-        uri += "="
-        uri += opts[Object.keys(opts)[i]];
+        var paramName = Object.keys(opts)[i];
+        var paramVal = opts[Object.keys(opts)[i]];
+
+        if (typeof(paramVal) === 'object') {
+          for (j=0; j < Object.keys(paramVal).length; j++) {
+            uri += paramName + "[]=";
+            uri += paramVal[i];
+          }
+        } else {
+          uri += paramName;
+          uri += "="
+          uri += paramVal;
+        }
         if (i < Object.keys(opts).length - 1) uri += "&";
       }
     }
 
+    console.log(uri);
     doGetRaw(uri, function(err, res, body) {
 
       if (res && res.statusCode == 200) {

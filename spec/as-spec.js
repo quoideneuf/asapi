@@ -5,7 +5,7 @@ var Q = require('q');
 
 var fx = require('./fixtures.js');
 
-var ASUrl = 'http://localhost:8089';
+var ASUrl = 'http://localhost:4567';
 
 var As = require('../index.js');
 var as = new As({
@@ -82,8 +82,19 @@ describe("As", function() {
     });
   });
 
+  describe(".get", function() {
 
-   describe(".createRepository", function() {
+    it("can write options into the url string", function(done) {
+      var scope = nock(ASUrl).get('/search?type[]=resource&page=1').reply(200, JSON.stringify({first_page: 1, last_page: 0, this_page: 1, results: [], total_hits: 0}));
+
+      as.get('/search', {type: ['resource'], page: 1}).then(function(json) {
+        expect(json.total_hits).toEqual(0);
+        done();
+      });
+    });
+  });
+
+  describe(".createRepository", function() {
 
     describe('callback signature', function() {
 
