@@ -1,0 +1,24 @@
+{
+  "name": "asapi",
+  "main": "bundle.js",
+  "version": "0.1.4",
+  "homepage": "https://github.com/quoideneuf/asapi",
+  "authors": [
+    "Brian Hoffman <brianjhoffman@gmail.com>"
+  ],
+  "description": "Javascript client for the ArchivesSpace backend",
+  "moduleType": [
+    "node"
+  ],
+  "keywords": [
+    "ArchivesSpace"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
