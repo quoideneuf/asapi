@@ -83,9 +83,13 @@ api.ping().then(function(json) {
 });
 ```
 
-## Browserification (in progress)
+## In the Browser
 
-To create a version for the browser and test it, check out the source code and do the following:
+Install with bower and include bundle.js in your project:
+
+    $ bower install asapi --save
+
+To build bundle.js and test it, check out the source code and do the following:
 
 ```bash
 git clone git@github.com:quoideneuf/asapi.git
