@@ -109,6 +109,10 @@ function Api(opts) {
   };
 
 
+  this.del = function(uri, callback) {
+    return doDelete(uri, callback);
+  };
+
   this.getJobs = function(opts, callback) {
     var opts = opts || {};
     var page = opts.page || 1;
@@ -170,24 +174,36 @@ function Api(opts) {
       page = 1;
     }
 
-    that.getResources({page: page}, function(err, json) {
-      if (err) {
-        callback(err);
-      } else {
-        for (var i = 0; i < json.results.length; i++) {
-          callback(err, json.results[i]);
-        }
+    return eachPage(that.getResources, callback, page);
+  };
 
-        if (json.last_page > page) {
-          that.eachResource(callback, page + 1);
-        }
-      }
-    });
+
+  this.getUsers = function(opts, callback) {
+    if (typeof(opts) === 'function') {
+      callback = opts;
+      opts = { page: 1 };
+    }
+
+    return doGet("/users", opts, callback);
+  }
+
+
+  this.eachUser = function(callback, page) {
+    if (typeof(page) === 'undefined') {
+      page = 1;
+    }
+
+    return eachPage(that.getUsers, callback, page);
   };
 
 
   this.updateRecord = function(rec, callback) {
     return doPost(rec.uri, rec, callback);
+  };
+
+
+  this.updatePassword = function(user, password, callback) {
+    return doPost(user.uri + "?password=" + password, user, callback);
   };
 
 
@@ -236,6 +252,11 @@ function Api(opts) {
   };
 
 
+  this.createUser = function(obj, password, callback) {
+    return doPost("/users?password=" + password, obj, callback)
+  }
+
+
   this.createLocation = function(obj, callback) {
     return doPost("/locations", obj, callback);
   };
@@ -272,7 +293,7 @@ function Api(opts) {
 
 
   function resolvePath(path) {
-    if (activeRepo) {
+    if (activeRepo && path.match(":repo_id")) {
       path = path.replace(":repo_id", activeRepo);
     }
 
@@ -489,6 +510,22 @@ function Api(opts) {
     });
   }
 
+
+  function eachPage(pageRecords, callback, page) {
+    pageRecords({page: page}, function(err, json) {
+      if (err) {
+        callback(err);
+      } else {
+        for (var i = 0; i < json.results.length; i++) {
+          callback(err, json.results[i]);
+        }
+
+        if (json.last_page > page) {
+          pageRecords(callback, page + 1);
+        }
+      }
+    });
+  }
 
   function parseError(body) {
 
