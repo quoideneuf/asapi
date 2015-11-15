@@ -19,7 +19,8 @@ var as = new As({
       reject: d.reject,
       promise: d.promise
     }
-  }
+  },
+  connectionTimeout: 1500
 });
 
 
@@ -41,45 +42,101 @@ describe("As", function() {
     nock.cleanAll();
   });
 
-
-  describe(".ping", function() {
-
-    it("can be used with a callback", function(done) {
-      as.ping(function(err, json) {
-        expect(json.archivesSpaceVersion).toMatch(/v\d\.\d/);
-        done();
-      });
-    });
-
-    it("returns a promise", function(done) {
-      as.ping().then(function(json) {
-        expect(json.archivesSpaceVersion).toMatch(/v\d\.\d/);
-        done();
-      });
-    });
-
-    it('produces an ASpaceError if the server returns a 404', function(done) {
+  describe("error handling", function() {
+    it('produces an ArchivesSpaceServerError if the server returns a 404', function(done) {
       var scope = nock(ASUrl).get('/').reply(404);
 
       as.ping().then(function(response) {
         expect(true).toBe(false);
         done();
       }).catch(function(error) {
-        expect(error.name).toEqual('ArchivesSpace Error 404');
-        done();        
-      });
-    });
-
-    it('emits an archivesSpaceServerError event if the server returns a 404', function(done) {
-      var scope = nock(ASUrl).get('/').reply(404);
-
-      as.once('archivesSpaceServerError', function(err) {
-        expect(err.code).toEqual(404);
+        expect(error.name).toEqual('ArchivesSpaceServerError');
+        expect(error.code).toEqual(404);
         done();
       });
-
-      as.ping();
     });
+
+    it('puts the response body in the error message', function(done) {
+      var scope = nock(ASUrl).get('/').reply(404, "My advice to you is to do what your parents did - get a job, sir");
+
+       as.ping().then(function(response) {
+        expect(true).toBe(false);
+        done();
+      }).catch(function(error) {
+
+        expect(error.name).toEqual('ArchivesSpaceServerError');
+        expect(error.message).toMatch(/advice/);
+        done();
+      });
+    });
+
+
+    it('passes other errors through as is', function(done) {
+      var scope = nock(ASUrl).get('/').replyWithError("uh oh");
+
+      as.ping().then(function(response) {
+        expect(true).toBe(false);
+        done();
+      }).catch(function(error) {
+        expect(error.name).toEqual('Error');
+        expect(error.message).toEqual("uh oh");
+        done();
+      });
+    });
+
+    it('handles connection timeout', function(done) {
+      var scope = nock(ASUrl).get('/').delayConnection(2000).reply(200, JSON.stringify({version: "oof"}));
+
+      as.ping().then(function(response) {
+        expect(true).toBe(false);
+        done();
+      }).catch(function(error) {
+        expect(error.name).toEqual('Error');
+        expect(error.message).toEqual("ETIMEDOUT");
+        done();
+      });
+    });
+
+
+    it('handles bad logins', function(done) {
+      as.login({user:'admin', password:'notmypassword'}).then(function(response) {
+        expect(true).toBe(false);
+        done();
+      }).catch(function(error) {
+        expect(error.name).toEqual('ArchivesSpaceServerError');
+        expect(error.code).toEqual(403);
+        done();
+      });
+    });
+  });
+
+
+  describe(".ping", function() {
+
+    it("can be used with a callback", function(done) {
+      as.ping(function(err, json) {
+        expect(json.archivesSpaceVersion).toMatch(/v?\d+[\.|-]\d+/);
+        done();
+      });
+    });
+
+    it("returns a promise", function(done) {
+      as.ping().then(function(json) {
+        expect(json.archivesSpaceVersion).toMatch(/v?\d+[\.|-]\d+/);
+        done();
+      });
+    });
+
+    // it('emits an archivesSpaceServerError event if the server returns a 404', function(done) {
+    //   var scope = nock(ASUrl).get('/').reply(404);
+
+    //   as.once('archivesSpaceServerError', function(err) {
+    //     expect(err.code).toEqual(404);
+    //     done();
+    //   });
+
+    //   as.ping();
+    // });
   });
 
   describe(".get", function() {
@@ -124,7 +181,8 @@ describe("As", function() {
         var scope = nock(ASUrl).post('/repositories').reply(400, JSON.stringify({"error":{"repo_code":["Property is required but was missing"]},"warning":null,"invalid_object":"#<JSONModel(:repository) {\"name\"=>\"dfdsf\", \"jsonmodel_type\"=>\"repository\"}>"}));
 
         as.createRepository(fx.repo()).catch(function(err) {
-          expect(err.name).toEqual("ArchivesSpace Error 400");
+          expect(err.name).toEqual("ArchivesSpaceServerError");
+          expect(err.code).toEqual(400)
           done();
         });
       });
@@ -136,7 +194,7 @@ describe("As", function() {
 
     describe('callback signature', function() {
 
-      it('should pass the created location object to the callback', function(done) {
+      it('should pass the created classification object to the callback', function(done) {
         as.createClassification(fx.classification(), function(err, json) {
           expect(json.uri).toMatch(/classifications\/\d/);
           done();
@@ -150,9 +208,7 @@ describe("As", function() {
         as.createClassification(fx.classification()).then(function(json) {
           expect(json.uri).toMatch(/classifications\/\d/);
           done();
-        }).catch(function(err) {
-          console.log("ERR");
-        });
+        })
       });
     });
   }); // /.createClassification
@@ -254,7 +310,7 @@ describe("As", function() {
   }); // /.createDigitalObject
 
 
-  describe('.createJob', function() {
+  xdescribe('.createJob', function() {
 
     beforeEach(function(done) {
       fs.writeFileSync("test-ead.xml", "<ead></ead>");
@@ -290,7 +346,6 @@ describe("As", function() {
 
       it('is a job creator', function(done) {
         as.createJob(job, function(err, json) {
-          console.log(json);
           expect(json.uri).toMatch(/jobs\/\d/);
           done();
         });
@@ -340,6 +395,7 @@ describe("As", function() {
       var scope = nock(ASUrl).get('/repositories/2/resources?page=2').reply(200, fx.mockGetResources(2,3));
 
       as.getResources({page: 2}, function(err, response) {
+        console.log(response);
         expect(response.this_page).toEqual(2);
         expect(response.last_page).toEqual(3);
         expect(response.results.length).toEqual(10);
@@ -370,7 +426,8 @@ describe("As", function() {
       nock(ASUrl).get('/repositories/2/resources?page=1').reply(403);
 
       as.eachResource(function(err, resource) {
-        expect(err.name).toEqual("ArchivesSpace Error 403");
+        expect(err.name).toEqual("ArchivesSpaceServerError");
+        expect(err.code).toEqual(403);
         done();
       });
     });
