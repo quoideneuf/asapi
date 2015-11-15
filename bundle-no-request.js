@@ -1,3 +1,4 @@
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var request = require('./lib/request');
 
 var formDataFactory = require('./lib/form-data-factory.js');
@@ -14,7 +15,7 @@ function Api(opts) {
   var requestInterface = opts.requestInterface;
   var connectionTimeout = opts.connectionTimeout || 7200;
 
-  var that = this;
+  var self = this;
 
 
   if (typeof(requestInterface) != 'undefined') {
@@ -114,10 +115,6 @@ function Api(opts) {
   };
 
 
-  this.del = function(uri, callback) {
-    return doDelete(uri, callback);
-  };
-
   this.getJobs = function(opts, callback) {
     var opts = opts || {};
     var page = opts.page || 1;
@@ -177,27 +174,19 @@ function Api(opts) {
       page = 1;
     }
 
+    self.getResources({page: page}, function(err, json) {
+      if (err) {
+        callback(err);
+      } else {
+        for (var i = 0; i < json.results.length; i++) {
+          callback(err, json.results[i]);
+        }
 
-    return eachPage(that.getResources, callback, page);
-  };
-
-
-  this.getUsers = function(opts, callback) {
-    if (typeof(opts) === 'function') {
-      callback = opts;
-      opts = { page: 1 };
-    }
-
-    return doGet("/users", opts, callback);
-  }
-
-
-  this.eachUser = function(callback, page) {
-    if (typeof(page) === 'undefined') {
-      page = 1;
-    }
-
-    return eachPage(that.getUsers, callback, page);
+        if (json.last_page > page) {
+          self.eachResource(callback, page + 1);
+        }
+      }
+    });
   };
 
 
@@ -205,12 +194,7 @@ function Api(opts) {
     return doPost(rec.uri, rec, callback);
   };
 
-
-  this.updatePassword = function(user, password, callback) {
-    return doPost(user.uri + "?password=" + password, user, callback);
-  };
-
-
+  // needs to be update for new AS background jobs scheme
   this.createJob = function(job, callback) {
     var d = promiseFactory();
 
@@ -256,11 +240,6 @@ function Api(opts) {
   };
 
 
-  this.createUser = function(obj, password, callback) {
-    return doPost("/users?password=" + password, obj, callback)
-  }
-
-
   this.createLocation = function(obj, callback) {
     return doPost("/locations", obj, callback);
   };
@@ -297,7 +276,7 @@ function Api(opts) {
 
 
   function resolvePath(path) {
-    if (activeRepo && path.match(":repo_id")) {
+    if (activeRepo) {
       path = path.replace(":repo_id", activeRepo);
     }
 
@@ -455,24 +434,6 @@ function Api(opts) {
   }
 
 
-
-  function eachPage(pageRecords, callback, page) {
-    pageRecords({page: page}, function(err, json) {
-      if (err) {
-        callback(err);
-      } else {
-        for (var i = 0; i < json.results.length; i++) {
-          callback(err, json.results[i]);
-        }
-
-        if (json.last_page > page) {
-          pageRecords(callback, page + 1);
-        }
-      }
-    });
-  }
-
-
   function requestRequest(method, opts, callback) {
     var d = promiseFactory();
 
@@ -560,3 +521,49 @@ module.exports = Api;
 if (typeof(window) != 'undefined') {
   window.Api = Api;
 }
+
+},{"./lib/file-loader.js":2,"./lib/form-data-factory.js":3,"./lib/log-factory.js":4,"./lib/request":5}],2:[function(require,module,exports){
+function FileLoader() {
+
+  this.existsSync = function() {
+    false;
+  };
+
+  this.createReadStream = function() {
+  };
+
+}
+
+module.exports = new FileLoader();
+
+},{}],3:[function(require,module,exports){
+function NoFormData() {
+  this.append = function(field, json) {
+    throw new Error("Multipart form not supported for browsers at this time");
+  };
+}
+
+module.exports = function() {
+  return new NoFormData();
+};
+
+},{}],4:[function(require,module,exports){
+function Logger() {
+  this.debug = function(msg) {
+    console.log(msg);
+  };
+
+  this.info = function(msg) {
+    console.log(msg);
+  };
+}
+
+
+
+module.exports = function() {
+  return new Logger();
+};
+
+},{}],5:[function(require,module,exports){
+
+},{}]},{},[1]);

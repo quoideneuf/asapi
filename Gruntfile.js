@@ -2,9 +2,16 @@ module.exports = function(grunt) {
   
   grunt.initConfig({
     browserify: {
-      build: {
+      full: {
         src: ['index.js'],
-        dest: 'bundle.js'
+        dest: 'bundle.js',
+      },
+      light: {
+        src: ['index.js'],
+        dest: 'bundle-no-request.js',
+        options: {
+          ignore: ['./lib/browser-request.js']
+        }
       }
     },
     karma: {
