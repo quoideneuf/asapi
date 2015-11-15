@@ -466,7 +466,7 @@ function Api(opts) {
         }
 
         if (json.last_page > page) {
-          pageRecords(callback, page + 1);
+          eachPage(pageRecords, callback, page + 1);
         }
       }
     });
