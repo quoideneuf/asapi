@@ -127,16 +127,6 @@ describe("As", function() {
       });
     });
 
-    // it('emits an archivesSpaceServerError event if the server returns a 404', function(done) {
-    //   var scope = nock(ASUrl).get('/').reply(404);
-
-    //   as.once('archivesSpaceServerError', function(err) {
-    //     expect(err.code).toEqual(404);
-    //     done();
-    //   });
-
-    //   as.ping();
-    // });
   });
 
   describe(".get", function() {
@@ -330,7 +320,7 @@ describe("As", function() {
     });
 
 
-    it('handles an error', function(done) {
+    xit('handles an error', function(done) {
       var job = {
         import_type: 'ead_xml',
         files: [ 'no-such-file.xml' ]
@@ -344,7 +334,7 @@ describe("As", function() {
 
     describe('callback signature', function() {
 
-      it('is a job creator', function(done) {
+      xit('is a job creator', function(done) {
         as.createJob(job, function(err, json) {
           expect(json.uri).toMatch(/jobs\/\d/);
           done();
@@ -354,7 +344,7 @@ describe("As", function() {
 
     describe('promise signature', function() {
 
-      it("is a job creator", function(done) {
+      xit("is a job creator", function(done) {
         var p = as.createJob(job);
         p.then(function(json) {
           expect(json.uri).toMatch(/jobs\/\d/);
@@ -395,7 +385,6 @@ describe("As", function() {
       var scope = nock(ASUrl).get('/repositories/2/resources?page=2').reply(200, fx.mockGetResources(2,3));
 
       as.getResources({page: 2}, function(err, response) {
-        console.log(response);
         expect(response.this_page).toEqual(2);
         expect(response.last_page).toEqual(3);
         expect(response.results.length).toEqual(10);
